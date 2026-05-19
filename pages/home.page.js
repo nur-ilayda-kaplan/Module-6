@@ -1,4 +1,4 @@
-const BasePage = require("./base.page");
+const BasePage = require("../core/base-page");
 
 class HomePage extends BasePage {
   get searchInput() {
@@ -86,16 +86,44 @@ class HomePage extends BasePage {
   }
 
   async waitForFiltersToBeVisible() {
-    const filterContainers = await $$('[data-test="filters"]');
+    // First, check if filter controls are already visible to avoid unnecessary clicks.
+    // This makes the method more stable and less flaky.
+    try {
+      await browser.waitUntil(
+        async () => {
+          const categories = await this.allCategoryFilterInputs;
+          const brands = await this.allBrandFilterInputs;
+          const ranges = await $$('input[type="range"]');
 
-    for (const filterContainer of filterContainers) {
-      if (await filterContainer.isDisplayed()) {
-        if (await filterContainer.isClickable()) {
-          await filterContainer.click();
-        }
+          return (
+            categories.length > 0 || brands.length > 0 || ranges.length > 0
+          );
+        },
+        {
+          timeout: 2000,
+          timeoutMsg: "Filter controls not immediately visible",
+        },
+      );
+      // Filter controls are already visible, no need to expand
+      return;
+    } catch (err) {
+      // Filter controls not immediately visible, proceed to expand them
+    }
+
+    // Try to click on filter panel to expand it (if it's collapsible)
+    const filterContainers = await $$('[data-test="filters"]');
+    if (filterContainers.length > 0) {
+      const firstContainer = filterContainers[0];
+      if (
+        (await firstContainer.isDisplayed()) &&
+        (await firstContainer.isClickable())
+      ) {
+        await firstContainer.click();
+        await browser.pause(300); // Give UI time to update
       }
     }
 
+    // Wait for filter controls to appear after expansion
     await browser.waitUntil(
       async () => {
         const categories = await this.allCategoryFilterInputs;
@@ -106,7 +134,7 @@ class HomePage extends BasePage {
       },
       {
         timeout: 10000,
-        timeoutMsg: "Filter controls were not found",
+        timeoutMsg: "Filter controls were not found after attempting to expand",
       },
     );
   }
@@ -265,32 +293,7 @@ class HomePage extends BasePage {
     return selectedOption;
   }
 
-  async assertProductsAreInSelectedOrder(sortValue) {
-    const value = sortValue.toLowerCase();
-
-    if (value.includes("price")) {
-      const prices = await this.getVisibleProductPrices();
-      const sortedPrices = [...prices].sort((a, b) => a - b);
-
-      if (value.includes("desc")) {
-        sortedPrices.reverse();
-      }
-
-      expect(prices).toEqual(sortedPrices);
-      return;
-    }
-
-    if (value.includes("name")) {
-      const names = await this.getVisibleProductNames();
-      const sortedNames = [...names].sort((a, b) => a.localeCompare(b));
-
-      if (value.includes("desc")) {
-        sortedNames.reverse();
-      }
-
-      expect(names).toEqual(sortedNames);
-    }
-  }
+  // Pages should provide data; assertions must be done in step definitions.
 
   async openFirstProductFromList() {
     const firstProduct = await $('[data-test^="product-"]');
@@ -445,22 +448,51 @@ class HomePage extends BasePage {
   }
 
   async doVisibleCardsContainBrand(brandName) {
-    const allCardTexts = await browser.execute(() =>
-      Array.from(document.querySelectorAll("a.card")).map((card) =>
-        (card.textContent || "").trim(),
-      ),
+    // Get all visible product card texts from the page
+    const cardTexts = await browser.execute(() =>
+      Array.from(document.querySelectorAll("a.card"))
+        .map((card) => (card.textContent || "").trim())
+        .filter(Boolean),
     );
 
-    const normalizedBrand = brandName.toLowerCase();
-    const cardsWithBrandText = allCardTexts.filter((text) =>
-      text.toLowerCase().includes(normalizedBrand),
-    );
-
-    if (cardsWithBrandText.length === 0) {
-      return true;
+    // If no cards found, throw error instead of returning false positive
+    if (!cardTexts || cardTexts.length === 0) {
+      throw new Error("No product cards found after brand filter was applied");
     }
 
-    return cardsWithBrandText.length === allCardTexts.length;
+    // Check that all cards contain the brand name (normalized to lowercase)
+    const normalizedBrand = brandName.toLowerCase();
+    const allCardsMatchBrand = cardTexts.every((cardText) =>
+      cardText.toLowerCase().includes(normalizedBrand),
+    );
+
+    // Return true only if ALL visible cards contain the brand
+    return allCardsMatchBrand;
+  }
+
+  async doVisibleCardsContainCategory(categoryName) {
+    // Get all visible product card texts from the page
+    const cardTexts = await browser.execute(() =>
+      Array.from(document.querySelectorAll("a.card"))
+        .map((card) => (card.textContent || "").trim())
+        .filter(Boolean),
+    );
+
+    // If no cards found, throw error instead of returning false positive
+    if (!cardTexts || cardTexts.length === 0) {
+      throw new Error(
+        "No product cards found after category filter was applied",
+      );
+    }
+
+    // Check that all cards contain the category name (normalized to lowercase)
+    const normalizedCategory = categoryName.toLowerCase();
+    const allCardsMatchCategory = cardTexts.every((cardText) =>
+      cardText.toLowerCase().includes(normalizedCategory),
+    );
+
+    // Return true only if ALL visible cards contain the category
+    return allCardsMatchCategory;
   }
 
   async getVisibleProductPrices() {

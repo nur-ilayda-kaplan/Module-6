@@ -14,13 +14,14 @@ npm install -D @wdio/cli @wdio/local-runner @wdio/cucumber-framework @wdio/spec-
 ## Folder Structure
 
 ```text
-Module-4/
+Module-6/
 |-- features/
 |   |-- home.feature
 |   `-- step-definitions/
 |       `-- home.steps.js
+|-- core/
+|   `-- base-page.js
 |-- pages/
-|   |-- base.page.js
 |   `-- home.page.js
 |-- .gitignore
 |-- package.json

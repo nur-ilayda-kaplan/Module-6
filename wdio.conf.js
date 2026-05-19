@@ -1,6 +1,6 @@
 const isMac = process.platform === "darwin";
 
-const capabilities = [
+const defaultCapabilities = [
   {
     browserName: "chrome",
     "goog:chromeOptions": {
@@ -14,6 +14,30 @@ const capabilities = [
     },
   },
 ];
+
+const getBrowserNameFromArgs = () => {
+  const browserArg = process.argv.find((arg) => arg.startsWith("--browser="));
+  if (browserArg) {
+    return browserArg.split("=")[1]?.toLowerCase();
+  }
+  const browserIndex = process.argv.indexOf("--browser");
+  if (browserIndex >= 0 && process.argv[browserIndex + 1]) {
+    return process.argv[browserIndex + 1].toLowerCase();
+  }
+  return null;
+};
+
+const requestedBrowser = getBrowserNameFromArgs();
+
+const capabilities = requestedBrowser
+  ? defaultCapabilities.filter(
+      (cap) => cap.browserName.toLowerCase() === requestedBrowser,
+    )
+  : defaultCapabilities;
+
+if (requestedBrowser && capabilities.length === 0) {
+  throw new Error(`Unsupported browser requested: ${requestedBrowser}`);
+}
 
 if (isMac) {
   capabilities.push({

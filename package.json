@@ -1,14 +1,14 @@
 {
-  "name": "module-4",
+  "name": "module-6",
   "version": "1.0.0",
   "private": true,
   "description": "Simple WebdriverIO + Cucumber project for Practice Software Testing.",
   "scripts": {
     "test": "wdio run ./wdio.conf.js",
     "test:smoke": "wdio run ./wdio.conf.js --cucumberOpts.tagExpression=@smoke",
-    "test:chrome": "wdio run ./wdio.conf.js --capabilities.browserName=chrome",
-    "test:firefox": "wdio run ./wdio.conf.js --capabilities.browserName=firefox",
-    "test:safari": "wdio run ./wdio.conf.js --capabilities.browserName=safari"
+    "test:chrome": "wdio run ./wdio.conf.js --browser=chrome",
+    "test:firefox": "wdio run ./wdio.conf.js --browser=firefox",
+    "test:safari": "wdio run ./wdio.conf.js --browser=safari"
   },
   "devDependencies": {
     "@wdio/cli": "latest",
